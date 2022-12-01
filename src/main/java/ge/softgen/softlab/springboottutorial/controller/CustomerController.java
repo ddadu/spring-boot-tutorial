@@ -1,5 +1,6 @@
 package ge.softgen.softlab.springboottutorial.controller;
 
+import ge.softgen.softlab.springboottutorial.NotFoundException;
 import ge.softgen.softlab.springboottutorial.entity.Customer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,11 +23,11 @@ public class CustomerController {
 
     @GetMapping("/customers/{id}")
     public ResponseEntity<Customer> getBuyId(@PathVariable int id) {
-        var optional = db.stream().filter(c -> c.getId() == id).findFirst();
-        if (optional.isEmpty()) {
+        try {
+            return ResponseEntity.ok(getCustomer(id));
+        } catch (NotFoundException e) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(optional.get());
     }
 
     @PostMapping("/customers")
@@ -40,25 +41,37 @@ public class CustomerController {
 
     @PutMapping("/customers/{id}")
     public ResponseEntity<Customer> update(@RequestBody Customer customer, @PathVariable int id) {
-        var optional = db.stream().filter(c -> c.getId() == id).findFirst();
-        if (optional.isEmpty()) {
+        try {
+            var foundCustomer = getCustomer(id);
+            foundCustomer.setFirstName(customer.getFirstName());
+            foundCustomer.setLastName(customer.getLastName());
+            foundCustomer.setBirthDate(customer.getBirthDate());
+            return ResponseEntity.ok(foundCustomer);
+        } catch (NotFoundException e) {
             return ResponseEntity.notFound().build();
         }
-        var foundCustomer = optional.get();
-        foundCustomer.setFirstName(customer.getFirstName());
-        foundCustomer.setLastName(customer.getLastName());
-        foundCustomer.setBirthDate(customer.getBirthDate());
-        return ResponseEntity.ok(foundCustomer);
+
+
     }
 
     @DeleteMapping("/customers/{id}")
     public ResponseEntity<Customer> delete(@PathVariable int id) {
-        var optional = db.stream().filter(c -> c.getId() == id).findFirst();
-        if (optional.isEmpty()) {
+        try {
+            var foundCustomer = getCustomer(id);
+            foundCustomer.setDelete(true);
+            return ResponseEntity.noContent().build();
+        } catch (NotFoundException e) {
             return ResponseEntity.notFound().build();
         }
-        var foundCustomer = optional.get();
-        foundCustomer.setDelete(true);
-        return ResponseEntity.noContent().build();
+
+
+    }
+
+    private Customer getCustomer(int id) throws NotFoundException {
+        var optional = db.stream().filter(c -> c.getId() == id).findFirst();
+        if (optional.isEmpty()) {
+            throw new NotFoundException("Customer not found");
+        }
+        return optional.get();
     }
 }
